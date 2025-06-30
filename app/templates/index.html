@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>Certificate Generator</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="csv_file">Upload CSV File:</label>
+        <input type="file" name="csv_file" required><br>
+        <label for="template_file">Upload Template HTML:</label>
+        <input type="file" name="template_file" required><br>
+        <label for="image_file">Upload Background Image:</label>
+        <input type="file" name="image_file" required><br>
+        <button type="submit">Generate PDFs</button>
+    </form>
+</body>
+</html>
