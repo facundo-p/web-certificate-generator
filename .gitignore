@@ -4,4 +4,6 @@ __pycache__/
 venv/
 dist/
 build/
+app/generated/
+app/uploads/
 *.egg-info

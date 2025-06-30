@@ -5,7 +5,7 @@ from fpdf import FPDF
 from jinja2 import Template
 import zipfile
 from io import BytesIO
-from utils.pdf_generator import PdfGenerator  # Import the PdfGenerator class
+from app.utils.pdf_generator import PdfGenerator  # Import the PdfGenerator class
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
