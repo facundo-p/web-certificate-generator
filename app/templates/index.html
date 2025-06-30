@@ -7,15 +7,79 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-    <h1>Certificate Generator</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <label for="csv_file">Upload CSV File:</label>
-        <input type="file" name="csv_file" required><br>
-        <label for="template_file">Upload Template HTML:</label>
-        <input type="file" name="template_file" required><br>
-        <label for="image_file">Upload Background Image:</label>
-        <input type="file" name="image_file" required><br>
-        <button type="submit">Generate PDFs</button>
-    </form>
+    <div class="container">
+        <h1>Certificate Generator</h1>
+        <form id="upload-form" enctype="multipart/form-data">
+            <div class="form-row">
+                <label for="csv_file">CSV File:</label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+            </div>
+
+            <div class="form-row">
+                <label for="html_file">HTML Template:</label>
+                <input type="file" id="html_file" name="html_file" accept=".html" required>
+            </div>
+
+            <div class="form-row">
+                <label for="image_file">Background Image:</label>
+                <input type="file" id="image_file" name="image_file" accept=".jpeg,.jpg,.png" required>
+            </div>
+
+            <button type="button" id="upload-button">Upload</button>
+        </form>
+
+        <button id="generate-button" disabled>Generate Certificates</button>
+        <p class="note">Please upload all files before generating certificates.</p>
+    </div>
+
+    <script>
+        document.getElementById('upload-button').addEventListener('click', async () => {
+            const csvFile = document.getElementById('csv_file').files[0];
+            const htmlFile = document.getElementById('html_file').files[0];
+            const imageFile = document.getElementById('image_file').files[0];
+
+            // Validate file types
+            if (!csvFile || !csvFile.name.endsWith('.csv')) {
+                alert('Please upload a valid CSV file.');
+                return;
+            }
+            if (!htmlFile || !htmlFile.name.endsWith('.html')) {
+                alert('Please upload a valid HTML file.');
+                return;
+            }
+            if (!imageFile || !(imageFile.name.endsWith('.jpeg') || imageFile.name.endsWith('.jpg') || imageFile.name.endsWith('.png'))) {
+                alert('Please upload a valid JPEG or PNG image file.');
+                return;
+            }
+
+            // Proceed with upload if all files are valid
+            const formData = new FormData(document.getElementById('upload-form'));
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                alert('Files uploaded successfully!');
+                document.getElementById('generate-button').disabled = false;
+            } else {
+                alert('Error uploading files!');
+            }
+        });
+
+        document.getElementById('generate-button').addEventListener('click', async () => {
+            const response = await fetch('/generate', { method: 'POST' });
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'certificates.zip';
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('Error generating certificates!');
+            }
+        });
+    </script>
 </body>
 </html>
