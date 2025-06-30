@@ -6,8 +6,11 @@ from jinja2 import Template
 import zipfile
 from io import BytesIO
 from app.utils.pdf_generator import PdfGenerator  # Import the PdfGenerator class
-
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=os.path.join('app', 'templates'),
+    static_folder=os.path.join('app', 'static')
+)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['GENERATED_FOLDER'] = 'generated'
 
