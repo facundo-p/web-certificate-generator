@@ -1,21 +1,19 @@
-from fpdf import FPDF
-from jinja2 import Template
 from fpdf import FPDF, HTMLMixin
+from jinja2 import Template
+import os
 
 class PDF(FPDF, HTMLMixin):
     pass
+
 
 class PdfGenerator:
     def __init__(self, html_template, background_image_path):
         """
         Initializes the PdfGenerator with a Jinja2 template and a background image path.
-
-        :param
-        html_template: Jinja2 Template object for rendering the certificate content.
-        :param background_image_path: Path to the background image file.
         """
         self.html_template = html_template
         self.background_image_path = background_image_path
+
         if not self.background_image_path:
             raise ValueError("Background image path must be provided.")
         if not self.html_template:
@@ -26,28 +24,45 @@ class PdfGenerator:
             raise TypeError("background_image_path must be a string representing the file path.")
 
     def generate_pdf(self, data, output_path):
-        """
-        Generates a PDF certificate.
-
-        :param data: Dictionary containing the data for the certificate (e.g., a row from the CSV).
-        :param html_template: Jinja2 Template object for rendering the certificate content.
-        :param background_image: Path to the background image file.
-        :param output_path: Path to save the generated PDF.
-        """
-        # Create a PDF instance
+        """Generates a single PDF certificate."""
         pdf = PDF(orientation='L', unit='mm', format='A4')
         pdf.add_page()
 
-        # Add the background image
-        pdf.image(self.background_image_path, x=0, y=0, w=297, h=210)  
-        # Center the HTML content on the page
-        pdf.set_left_margin(60)  # Set left margin
-        pdf.set_right_margin(60)  # Set right margin
-        pdf.set_y(78)  # Adjust vertical position (top margin)
+        # Background image
+        pdf.image(self.background_image_path, x=0, y=0, w=297, h=210)
+        pdf.set_left_margin(60)
+        pdf.set_right_margin(60)
+        pdf.set_y(78)
 
-        # Add the rendered HTML content to the PDF
+        # Render HTML
         pdf.set_font("Arial", size=16)
         rendered_html = self.html_template.render(data)
         pdf.write_html(rendered_html)
-        
+
         pdf.output(output_path)
+        return output_path
+
+    def generate_all_pdfs(self, data_list, output_folder, progress_callback=None, channel=None):
+        """
+        Generates one PDF per data row and reports progress.
+
+        :param data_list: List of dictionaries (rows from CSV).
+        :param output_folder: Folder where PDFs will be saved.
+        :param progress_callback: Optional function(progress_percent, message)
+        :param channel: Optional channel identifier for progress reporting. 
+        """
+        os.makedirs(output_folder, exist_ok=True)
+        total = len(data_list)
+        pdf_paths = []
+
+        for i, data in enumerate(data_list, start=1):
+            output_path = os.path.join(output_folder, f"cert_{i}.pdf")
+            self.generate_pdf(data, output_path)
+            pdf_paths.append(output_path)
+
+            # Emit progress
+            if progress_callback:
+                percent = int((i / total) * 100)
+                progress_callback(percent, f"Generado {i}/{total} certificados...", channel)
+
+        return pdf_paths
