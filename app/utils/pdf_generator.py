@@ -54,15 +54,18 @@ class PdfGenerator:
         os.makedirs(output_folder, exist_ok=True)
         total = len(data_list)
         pdf_paths = []
+        try:
+            for i, data in enumerate(data_list, start=1):
+                output_path = os.path.join(output_folder, f"{data['name']}.pdf")
+                self.generate_pdf(data, output_path)
+                pdf_paths.append(output_path)
 
-        for i, data in enumerate(data_list, start=1):
-            output_path = os.path.join(output_folder, f"cert_{i}.pdf")
-            self.generate_pdf(data, output_path)
-            pdf_paths.append(output_path)
-
-            # Emit progress
-            if progress_callback:
-                percent = int((i / total) * 100)
-                progress_callback(percent, f"Generado {i}/{total} certificados...", channel)
+                # Emit progress
+                if progress_callback:
+                    percent = int((i / total) * 100)
+                    progress_callback(percent, f"Generado {i}/{total} certificados...", channel)
+        except Exception as e:
+            mensaje = f"No se pudo generar el PDF en la línea {i}: {e}"
+            raise Exception(mensaje) from e
 
         return pdf_paths

@@ -7,32 +7,34 @@
 </head>
 <body>
     <div class="container">
-        <h1>Certificate Generator</h1>
+        <h1>Bayka</h1>
         <form id="upload-form" enctype="multipart/form-data">
             <h1>Generador de Certificados PDF</h1>
             <div class="form-row">
-                <label for="csv_file">CSV File:</label>
+                <label for="csv_file">Archivo CSV:</label>
                 <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
             </div>
 
             <div class="form-row">
-                <label for="html_file">HTML Template:</label>
+                <label for="html_file">Template HTML:</label>
                 <input type="file" id="html_file" name="html_file" accept=".html" required>
             </div>
 
             <div class="form-row">
-                <label for="image_file">Background Image:</label>
+                <label for="image_file">Imagen de Fondo:</label>
                 <input type="file" id="image_file" name="image_file" accept=".jpeg,.jpg,.png" required>
             </div>
 
-            <button id="generate-button" type="submit">Generate Certificates</button>
-            <p class="note">Please upload all files before generating certificates.</p>
+            <p class="note">Por favor subí los 3 archivos antes de generar los certificados.</p>
+            <button id="generate-button" type="submit">Generar Certificados</button>
         </form>
+        <div class="progress">
+            <div class="progress-bar" id="bar"></div>
+            <p id="status" class="note"></p>
+            <a id="download" class="download-link" style="display:none; justify-content: center;" href="#">Descargar ZIP</a>
+        </div>
     </div>
 
-    <div class="progress"><div class="progress-bar" id="bar"></div></div>
-    <p id="status"></p>
-    <a id="download" style="display:none;" href="#">Descargar ZIP</a>
 
   <script>
     const form = document.getElementById('upload-form');
@@ -60,6 +62,7 @@
         }
 
         e.preventDefault();
+        download.style.display = 'none';
         status.textContent = 'Procesando...';
         bar.style.width = '10%';
         const data = new FormData(form);
@@ -74,7 +77,7 @@
             status.textContent = payload.message;
             if (payload.download_url) {
                 download.href = payload.download_url;
-                download.style.display = 'inline';
+                download.style.display = 'flex';
                 source.close();
             }
         };

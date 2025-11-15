@@ -68,16 +68,16 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id, app
     """
     with app.app_context():
         try:
-            progress_callback(5, "Cargando datos...", job_id)
+            progress_callback(1, "Cargando datos...", job_id)
             data_list = parse_csv(csv_path)
             
-            progress_callback(10,"Preparando plantilla...", job_id)
+            progress_callback(2,"Preparando plantilla...", job_id)
             with open(html_path, "r", encoding="utf-8") as f:
                 html_template = Template(f.read())
 
             pdf_gen = PdfGenerator(html_template, bg_img_path)
 
-            progress_callback(15,"Generando certificados...", job_id)
+            progress_callback(3,"Generando certificados...", job_id)
 
             pdf_paths = pdf_gen.generate_all_pdfs(
                 data_list,
@@ -87,16 +87,11 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id, app
             )
 
             progress_callback(90, "Creando archivo ZIP...", job_id)
-            zip_path = create_zip(pdf_paths, output_zip_name)
-
-            progress_callback(100, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
-
-            # Limpieza opcional
-            for pdf in pdf_paths:
-                os.remove(pdf)
+            create_zip(pdf_paths, output_zip_name)
+            progress_callback(113, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
 
         except Exception as e:
-            progress_callback(0, f"❌ Error: {e}", job_id)
+            progress_callback(-10, f"❌ Error: {e}", job_id)
 
 
 @app.route('/')
