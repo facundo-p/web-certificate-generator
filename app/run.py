@@ -66,9 +66,9 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id, app
                 channel=job_id
             )
 
-            sse_manager.progress_callback(90, "Creando archivo ZIP...", job_id)
+            sse_manager.publish_progress(90, "Creando archivo ZIP...", job_id)
             create_zip(pdf_paths, output_zip_name)
-            sse_manager.progress_callback(100, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
+            sse_manager.publish_progress(100, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
 
         except Exception as e:
             sse_manager.progress_callback(0, f"❌ Error: {e}", job_id)
