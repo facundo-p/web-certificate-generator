@@ -1,9 +1,10 @@
 from flask import Flask, render_template, Response, request, jsonify, send_from_directory
-import redis, json, os
+import os
 from jinja2 import Template
-import threading, time, os, zipfile, csv
+import threading, time, zipfile, csv
 
 from utils.pdf_generator import PdfGenerator
+from utils.sse_manager import SSEManager
 
 app = Flask(
     __name__,
@@ -11,9 +12,7 @@ app = Flask(
     static_folder=os.path.join('static')
 )
 
-redis_host = os.getenv("REDIS_HOST", "localhost")
-redis_port = int(os.getenv("REDIS_PORT", 6379))
-r = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+sse_manager = SSEManager()
 
 OUTPUT_FOLDER = os.path.join(app.static_folder, 'generated')
 TMP_FOLDER = os.path.join(app.static_folder, 'tmp')
@@ -42,56 +41,37 @@ def create_zip(pdf_paths, output_zip_name):
     return zip_path
 
 
-def progress_callback(progress, message, channel, download_url=None):
-    """
-    Envía mensajes al front vía SSE para indicar el progreso al procesar los PDFs.
-
-    :param progress: Porcentaje del trabajo completado.
-    :param message: Mensaje a ser mostrado junto a la barra de progreso.
-    :param channel: Identificador del canal en el que se estableció la conexión SSE.
-    :param download_url: URL para descargar el ZIP final (opcional).
-    """
-    # Ajustamos el porcentaje total para incluir pasos previos y ZIP final
-    adjusted_progress = 10 + int(progress * 0.8)  # de 10% a 90%
-    data = {
-        "progress": adjusted_progress,
-        "message": message,
-        "download_url": download_url
-    }
-
-    r.publish(channel,json.dumps(data))
-
 def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id, app):
     """
     Función que corre en un thread: genera los PDFs y publica progreso vía SSE,
-    aprovechando el progress_callback en PdfGenerator.
+    aprovechando el progress_callback en SSEManager.
     """
     with app.app_context():
         try:
-            progress_callback(1, "Cargando datos...", job_id)
+            sse_manager.progress_callback(1, "Cargando datos...", job_id)
             data_list = parse_csv(csv_path)
             
-            progress_callback(2,"Preparando plantilla...", job_id)
+            sse_manager.progress_callback(2,"Preparando plantilla...", job_id)
             with open(html_path, "r", encoding="utf-8") as f:
                 html_template = Template(f.read())
 
             pdf_gen = PdfGenerator(html_template, bg_img_path)
 
-            progress_callback(3,"Generando certificados...", job_id)
+            sse_manager.progress_callback(3,"Generando certificados...", job_id)
 
             pdf_paths = pdf_gen.generate_all_pdfs(
                 data_list,
                 output_folder=TMP_FOLDER,
-                progress_callback=progress_callback,
+                progress_callback=sse_manager.progress_callback,
                 channel=job_id
             )
 
-            progress_callback(90, "Creando archivo ZIP...", job_id)
+            sse_manager.progress_callback(90, "Creando archivo ZIP...", job_id)
             create_zip(pdf_paths, output_zip_name)
-            progress_callback(113, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
+            sse_manager.progress_callback(100, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
 
         except Exception as e:
-            progress_callback(-10, f"❌ Error: {e}", job_id)
+            sse_manager.progress_callback(0, f"❌ Error: {e}", job_id)
 
 
 @app.route('/')
@@ -107,15 +87,7 @@ def stream():
     
     print(f"✅ el channel es {channel}")
 
-    def event_stream():
-        pubsub = r.pubsub()
-        pubsub.subscribe(channel)
-        for message in pubsub.listen():
-            if message['type'] == 'message':
-                data = message['data']
-                yield f"data: {data}\n\n"
-
-    return Response(event_stream(), mimetype="text/event-stream")
+    return Response(sse_manager.get_stream_generator(channel), mimetype="text/event-stream")
 
 
 @app.route('/generate', methods=['POST'])
@@ -157,7 +129,7 @@ def download(filename):
 
 @app.route("/test_sse")
 def test_sse():
-    progress_callback(42, "Hello from test", "test")
+    sse_manager.progress_callback(42, "Hello from test", "test")
     return "Sent!"
 
 
