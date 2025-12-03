@@ -6,7 +6,8 @@ html {
 body {
     font-family: Arial, sans-serif;
     /*background-color: #f106de;*/
-    background-image: url('/static/images/background.avif');
+    background-image: url('/static/images/maluka_1.jpg');
+    background-size: cover;
     margin: 0;
     padding: 0;
     display: flex;
@@ -31,7 +32,7 @@ h1 {
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     max-width: 500px;
-    height: 600px;
+    height: 650px;
     width: 100%;
     overflow: auto;
 }

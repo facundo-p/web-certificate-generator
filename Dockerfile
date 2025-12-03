@@ -17,9 +17,9 @@ COPY ./app /app
 EXPOSE 5000 5678
 
 # Comando para iniciar con debugpy (modo escucha)
-CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "run.py"]
+#CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "run.py"]
 
 # Ejecuta la aplicación
-#CMD ["python", "run.py"]
+CMD ["python", "run.py"]
 #CMD ["flask", "run", "--host=0.0.0.0"]
 
