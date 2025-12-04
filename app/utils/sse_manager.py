@@ -17,13 +17,27 @@ class SSEManager:
         :param redis_host: Redis host (defaults to env var REDIS_HOST or 'localhost')
         :param redis_port: Redis port (defaults to env var REDIS_PORT or 6379)
         """
-        self.redis_host = redis_host or os.getenv("REDIS_HOST", "localhost")
-        self.redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
-        self.redis_client = redis.Redis(
-            host=self.redis_host,
-            port=self.redis_port,
-            decode_responses=True
-        )
+
+        upstash_url = os.getenv("REDIS_URL")
+        upstash_token = os.getenv("REDIS_TOKEN")
+
+        if upstash_url and upstash_token:
+            # --- Upstash Redis (Production) ---
+            self.redis_client =  redis.Redis.from_url(
+                upstash_url,
+                password=upstash_token,
+                decode_responses=True
+                )
+
+        else:
+            # -- local Redis (Development) ---
+            self.redis_host = redis_host or os.getenv("REDIS_HOST", "localhost")
+            self.redis_port = redis_port or int(os.getenv("REDIS_PORT", 6379))
+            self.redis_client = redis.Redis(
+                host=self.redis_host,
+                port=self.redis_port,
+                decode_responses=True
+            )
 
     def publish_progress(
         self,
