@@ -19,6 +19,10 @@ TMP_FOLDER = os.path.join(app.static_folder, 'tmp')
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(TMP_FOLDER, exist_ok=True)
 
+# Ensure the temporary and output directories exist
+# os.makedirs('tmp', exist_ok=True)
+# os.makedirs('output', exist_ok=True)
+
 
 def parse_csv(csv_path):
     """
@@ -41,23 +45,23 @@ def create_zip(pdf_paths, output_zip_name):
     return zip_path
 
 
-def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id, app):
+def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id):
     """
-    Función que corre en un thread: genera los PDFs y publica progreso vía SSE,
-    aprovechando el progress_callback en SSEManager.
+    Background task to generate PDFs and send progress updates via SSEManager.
     """
     with app.app_context():
         try:
+            # Notify the client that data is being loaded
             sse_manager.progress_callback(1, "Cargando datos...", job_id)
             data_list = parse_csv(csv_path)
-            
-            sse_manager.progress_callback(2,"Preparando plantilla...", job_id)
+            sse_manager.progress_callback(2, "Preparando plantilla...", job_id)
+
             with open(html_path, "r", encoding="utf-8") as f:
                 html_template = Template(f.read())
 
+            # Initialize the PdfGenerator
             pdf_gen = PdfGenerator(html_template, bg_img_path)
-
-            sse_manager.progress_callback(3,"Generando certificados...", job_id)
+            sse_manager.progress_callback(3, "Generando certificados...", job_id)
 
             pdf_paths = pdf_gen.generate_all_pdfs(
                 data_list,
@@ -71,7 +75,12 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id, app
             sse_manager.publish_progress(100, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
 
         except Exception as e:
+            # Handle errors and notify the client
             sse_manager.progress_callback(0, f"❌ Error: {e}", job_id)
+
+        finally:
+            # Clean up the SSE channel
+            sse_manager.delete_channel(job_id)
 
 
 @app.route('/')
@@ -79,41 +88,47 @@ def index():
     print("Index requested")
     return render_template('index.html')
 
-# --- Ruta SSE: /stream ---
-@app.route('/stream')
-def stream():
-    """Abre una conexión SSE que escucha los mensajes de Redis"""
-    channel = request.args.get("channel", "events")  # canal por defecto
-    
-    print(f"✅ el channel es {channel}")
 
-    return Response(sse_manager.get_stream_generator(channel), mimetype="text/event-stream")
+@app.route('/stream/<job_id>')
+def stream(job_id):
+    """
+    SSE endpoint to stream progress updates for a specific job_id.
+    """
+    return sse_manager.stream(job_id)
 
 
 @app.route('/generate', methods=['POST'])
 def generate():
+    """
+    Start a background job to generate PDFs and stream progress updates to the client.
+    """
     if not ('csv_file' in request.files and 'html_file' in request.files and 'image_file' in request.files):
-        return jsonify({'error': 'Se requieren todos los archivos!'}), 400
-    
+        return jsonify({'error': 'All files are required!'}), 400
+
+    # Save uploaded files
     csv_file = request.files['csv_file']
     html_file = request.files['html_file']
     bg_img = request.files['image_file']
 
-    os.makedirs('tmp', exist_ok=True)
-    csv_path = os.path.join('tmp', csv_file.filename)
-    html_path = os.path.join('tmp', html_file.filename)
-    img_path = os.path.join('tmp', bg_img.filename)
+    csv_path = os.path.join(TMP_FOLDER, csv_file.filename)
+    html_path = os.path.join(TMP_FOLDER, html_file.filename)
+    img_path = os.path.join(TMP_FOLDER, bg_img.filename)
 
     csv_file.save(csv_path)
     html_file.save(html_path)
     bg_img.save(img_path)
 
-    output_zip_name = f"certificados_{int(time.time())}.zip"
+    # Generate unique job ID and output ZIP name
     job_id = f"job_{int(time.time())}"
+    output_zip_name = f"certificados_{int(time.time())}.zip"
 
+    # Create an SSE channel for the job
+    sse_manager.create_channel(job_id)
+
+    # Start the background task in a separate thread
     threading.Thread(
         target=generate_pdfs,
-        args=(csv_path, html_path, img_path, output_zip_name, job_id, app),
+        args=(csv_path, html_path, img_path, output_zip_name, job_id),
         daemon=True
     ).start()
 
@@ -126,11 +141,6 @@ def generate():
 @app.route('/download/<filename>')
 def download(filename):
     return send_from_directory(OUTPUT_FOLDER, filename, as_attachment=True)
-
-@app.route("/test_sse")
-def test_sse():
-    sse_manager.progress_callback(42, "Hello from test", "test")
-    return "Sent!"
 
 
 if __name__ == '__main__':
