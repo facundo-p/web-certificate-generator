@@ -1,5 +1,6 @@
 # Imagen base de Python
 FROM python:3.11-slim
+ENV PYTHONUNBUFFERED=1
 
 # Establece el directorio de trabajo
 WORKDIR /app
@@ -20,6 +21,6 @@ EXPOSE 5000 5678
 #CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "run.py"]
 
 # Ejecuta la aplicación
-CMD ["python", "run.py"]
+CMD ["python", "-u", "run.py"]
 #CMD ["flask", "run", "--host=0.0.0.0"]
 

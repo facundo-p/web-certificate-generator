@@ -43,6 +43,7 @@
     const download = document.getElementById('download');
 
     form.addEventListener('submit', async (e) => {
+        document.getElementById('generate-button').disabled = true;
         const csvFile = document.getElementById('csv_file').files[0];
         const htmlFile = document.getElementById('html_file').files[0];
         const imageFile = document.getElementById('image_file').files[0];
@@ -79,7 +80,15 @@
                 download.href = payload.download_url;
                 download.style.display = 'flex';
                 source.close();
+                document.getElementById('generate-button').disabled = false;
             }
+        };
+        source.onerror = (err) => {
+            // re-enable button if the SSE stream dies unexpectedly
+            console.error('SSE error', err);
+            document.getElementById('generate-button').disabled = false;
+            source.close();
+            status.textContent = 'Error en procesamiento';
         };
     });
   </script>

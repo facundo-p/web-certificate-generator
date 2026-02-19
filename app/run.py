@@ -19,19 +19,33 @@ TMP_FOLDER = os.path.join(app.static_folder, 'tmp')
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs(TMP_FOLDER, exist_ok=True)
 
-# Ensure the temporary and output directories exist
-# os.makedirs('tmp', exist_ok=True)
-# os.makedirs('output', exist_ok=True)
-
 
 def parse_csv(csv_path):
     """
     Lee un CSV y devuelve una lista de diccionarios (una por fila).
+    Detecta automáticamente el delimitador (coma, punto y coma, tabulador, etc.)
     Ejemplo de estructura: [{'nombre': 'Juan', 'curso': 'Python'}, ...]
     """
     with open(csv_path, newline='', encoding='utf-8-sig') as f:
-        reader = csv.DictReader(f)
-        return [row for row in reader]
+        # Detectar el delimitador automáticamente
+        sample = f.read(4096)
+        f.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=',;\t|')
+        except csv.Error:
+            # Si Sniffer falla, usar coma como default
+            dialect = 'excel'
+        
+        reader = csv.DictReader(f, dialect=dialect)
+        data = [row for row in reader]
+        
+        # Strip whitespace from keys and values to normalize
+        normalized_data = []
+        for row in data:
+            normalized_row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
+            normalized_data.append(normalized_row)
+        
+        return normalized_data
 
 
 def create_zip(pdf_paths, output_zip_name):
@@ -51,7 +65,6 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id):
     """
     with app.app_context():
         try:
-            # Notify the client that data is being loaded
             sse_manager.progress_callback(1, "Cargando datos...", job_id)
             data_list = parse_csv(csv_path)
             sse_manager.progress_callback(2, "Preparando plantilla...", job_id)
@@ -59,7 +72,6 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id):
             with open(html_path, "r", encoding="utf-8") as f:
                 html_template = Template(f.read())
 
-            # Initialize the PdfGenerator
             pdf_gen = PdfGenerator(html_template, bg_img_path)
             sse_manager.progress_callback(3, "Generando certificados...", job_id)
 
@@ -75,7 +87,6 @@ def generate_pdfs(csv_path, html_path, bg_img_path, output_zip_name, job_id):
             sse_manager.publish_progress(100, "✅ Certificados listos", job_id, f"/download/{output_zip_name}")
 
         except Exception as e:
-            # Handle errors and notify the client
             sse_manager.progress_callback(0, f"❌ Error: {e}", job_id)
 
         finally:
@@ -122,7 +133,6 @@ def generate():
     job_id = f"job_{int(time.time())}"
     output_zip_name = f"certificados_{int(time.time())}.zip"
 
-    # Create an SSE channel for the job
     sse_manager.create_channel(job_id)
 
     # Start the background task in a separate thread
