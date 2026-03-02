@@ -1,9 +1,32 @@
+# Python
 __pycache__/
 *.pyc
-.env
+*.pyo
+*.pyd
+*.log
+
+# Virtual envs
 venv/
-dist/
-build/
+
+# Docker
+*.pid
+*.sock
+*.db
+/data/
+tmp/
+redis_data/
+
+# VSCode
+.vscode/
+
+# PDFs y archivos generados
 app/generated/
 app/uploads/
+app/static/generated/
+app/static/tmp/
+dist/
+build/
 *.egg-info
+
+# macOS system files
+.DS_Store

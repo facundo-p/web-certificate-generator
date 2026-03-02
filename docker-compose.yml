@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: pdf_app
+    ports:
+      - "5050:5000"  # Flask
+      #- "5678:5678"  # Debugger
+    volumes:
+      - ./app:/app
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=0
+      - FLASK_RUN_HOST=0.0.0.0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    container_name: redis_server_pdf_app
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
